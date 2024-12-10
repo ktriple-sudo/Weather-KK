@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Update</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .shadow-text {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .weather-gradient-clear {
+            background: linear-gradient(to bottom, #60a5fa, #fde68a);
+        }
+
+        .weather-gradient-clouds {
+            background: linear-gradient(to bottom, #9ca3af, #d1d5db);
+        }
+
+        .weather-gradient-rain {
+            background: linear-gradient(to bottom, #4b5563, #6b7280);
+        }
+
+        .weather-container {
+            backdrop-filter: blur(8px);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen weather-gradient-clear transition-all duration-500">
+    <nav class="bg-gray-800 text-white text-center p-4 mt-8">
+        <div class="container mx-auto flex justify-between items-center px-4">
+            <h1 class="text-2xl font-bold">Weather App</h1>
+            <ul class="flex space-x-6">
+                <li><a href="http://www.icuzambia.net" class="hover:underline">ICU Zambia</a></li>
+                <li><a href="https://www.zrdc.org" class="hover:underline">ZRDC</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold mb-8 text-center text-white shadow-text">Weather Update</h1>
+        
+        <form id="searchForm" class="mb-12 flex justify-center">
+            <input
+                type="text"
+                id="cityInput"
+                placeholder="Enter city name"
+                class="w-full max-w-md px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+                type="submit"
+                class="bg-blue-500 text-white px-6 py-2 rounded-r-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </button>
+        </form>
+
+        <div id="errorContainer" class="hidden mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded"></div>
+        
+        <div id="loadingContainer" class="hidden text-center text-white text-xl">
+            <svg class="loading w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Loading...
+        </div>
+
+        <div id="weatherContainer" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div class="flex flex-col items-center justify-center weather-container rounded-lg p-6">
+                    <div id="weatherIcon" class="w-24 h-24"></div>
+                    <p id="condition" class="text-2xl mt-4 text-white shadow-text"></p>
+                    <p id="localTime" class="text-xl mt-2 text-white shadow-text"></p>
+                </div>
+                <div class="flex flex-col items-center justify-center weather-container rounded-lg p-6">
+                    <p id="temperature" class="text-7xl font-bold text-white shadow-text"></p>
+                    <p id="location" class="text-3xl mt-4 text-white shadow-text"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div class="flex items-center justify-center weather-container p-6 rounded-lg">
+                    <svg class="w-12 h-12 text-blue-200 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                    </svg>
+                    <div>
+                        <p class="text-lg text-white shadow-text">Humidity</p>
+                        <p id="humidity" class="text-3xl font-semibold text-white shadow-text"></p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center weather-container p-6 rounded-lg">
+                    <svg class="w-12 h-12 text-blue-200 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                    </svg>
+                    <div>
+                        <p class="text-lg text-white shadow-text">Wind Speed</p>
+                        <p id="windSpeed" class="text-3xl font-semibold text-white shadow-text"></p>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="text-3xl font-bold mb-4 text-center text-white shadow-text">5-Day Forecast</h2>
+            <div id="forecast" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+        </div>
+    </div>
+    <footer class="bg-gray-800 text-white text-center p-4 mt-8">
+        <p class="text-sm">Electrical and Electronic Eng. All Rights Reserved. Designed and Maintained By Keddy kulitwila, SIN: 2311164012</p>
+    </footer>
+
+    <script>
+        const API_KEY = '2deb3055fa20042abf812bd18f267b0c';
+        const weatherIcons = {
+            Clear: `<svg class="w-24 h-24 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>`,
+            Clouds: `<svg class="w-24 h-24 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                    </svg>`,
+            Rain: `<svg class="w-24 h-24 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z M16 13v4 M8 13v4 M12 15v4"/>
+                    </svg>`
+        };
+
+        const getBackgroundClass = (condition) => {
+            switch (condition) {
+                case 'Clear': return 'weather-gradient-clear';
+                case 'Clouds': return 'weather-gradient-clouds';
+                case 'Rain':
+                case 'Drizzle':
+                case 'Thunderstorm': return 'weather-gradient-rain';
+                default: return 'weather-gradient-clear';
+            }
+        };
+
+        const fetchWeatherData = async (city) => {
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('City not found');
+            const data = await response.json();
+
+            const currentUTC = new Date().getTime() + new Date().getTimezoneOffset() * 60000;
+            const localTime = new Date(currentUTC + data.timezone * 1000)
+                .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            return {
+                temperature: Math.round(data.main.temp),
+                condition: data.weather[0].main,
+                location: data.name,
+                humidity: data.main.humidity,
+                windSpeed: Math.round(data.wind.speed * 3.6),
+                localTime
+            };
+        };
+
+        const fetchForecastData = async (city) => {
+            const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${API_KEY}&units=metric`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Forecast data not available');
+            const data = await response.json();
+            
+            return data.list
+                .filter(reading => reading.dt_txt.includes("12:00:00"))
+                .map(day => ({
+                    day: new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' }),
+                    temperature: Math.round(day.main.temp),
+                    condition: day.weather[0].main
+                }))
+                .slice(0, 5);
+        };
+
+        const updateUI = (weather, forecast) => {
+            document.body.className = `min-h-screen ${getBackgroundClass(weather.condition)} transition-all duration-500`;
+            
+            document.getElementById('weatherIcon').innerHTML = weatherIcons[weather.condition] || weatherIcons.Clouds;
+            document.getElementById('condition').textContent = weather.condition;
+            document.getElementById('localTime').textContent = `Local Time: ${weather.localTime}`;
+            document.getElementById('temperature').textContent = `${weather.temperature}°C`;
+            document.getElementById('location').textContent = weather.location;
+            document.getElementById('humidity').textContent = `${weather.humidity}%`;
+            document.getElementById('windSpeed').textContent = `${weather.windSpeed} km/h`;
+
+            const forecastContainer = document.getElementById('forecast');
+            forecastContainer.innerHTML = forecast.map(day => `
+                <div class="weather-container p-4 rounded-lg text-center">
+                    <p class="text-lg font-semibold text-white shadow-text">${day.day}</p>
+                    <div class="w-16 h-16 mx-auto my-2">
+                        ${weatherIcons[day.condition] || weatherIcons.Clouds}
+                    </div>
+                    <p class="text-xl font-bold text-white shadow-text">${day.temperature}°C</p>
+                </div>
+            `).join('');
+        };
+
+        const toggleLoading = (show) => {
+            document.getElementById('loadingContainer').classList.toggle('hidden', !show);
+            document.getElementById('weatherContainer').classList.toggle('hidden', show);
+        };
+
+        const showError = (message) => {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.textContent = message;
+            errorContainer.classList.remove('hidden');
+            setTimeout(() => errorContainer.classList.add('hidden'), 3000);
+        };
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const city = document.getElementById('cityInput').value.trim();
+            if (!city) return;
+
+            toggleLoading(true);
+            try {
+                const [weather, forecast] = await Promise.all([
+                    fetchWeatherData(city),
+                    fetchForecastData(city)
+                ]);
+                updateUI(weather, forecast);
+                document.getElementById('cityInput').value = '';
+                document.getElementById('errorContainer').classList.add('hidden');
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            const defaultCity = 'Lusaka';
+            document.getElementById('cityInput').value = defaultCity;
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        });
+    </script>
+</body>
+</html>
